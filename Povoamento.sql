@@ -91,4 +91,46 @@ INSERT INTO MedicosParticipantes (id_agendamento, id_medico) VALUES (3, 'CRM-MG-
 INSERT INTO MedicosParticipantes (id_agendamento, id_medico) VALUES (4, 'CRM-MG-1006');
 INSERT INTO MedicosParticipantes (id_agendamento, id_medico) VALUES (5, 'CRM-MG-1001');
 
+-- =================================================================
+-- Carga extra: mais pacientes e solicitacoes Processadas com datas
+-- FUTURAS (julho/2026) para demonstrar agendamento nos dias seguintes.
+-- =================================================================
+
+-- -------- Pacientes adicionais --------
+INSERT INTO Paciente (cpf, nome, data_nascimento) VALUES ('77788899900', 'Lucas Martins', TO_DATE('10/02/1990', 'DD/MM/YYYY'));
+INSERT INTO Paciente (cpf, nome, data_nascimento) VALUES ('88899900011', 'Patricia Gomes', TO_DATE('22/06/1985', 'DD/MM/YYYY'));
+INSERT INTO Paciente (cpf, nome, data_nascimento) VALUES ('99900011122', 'Rafael Costa', TO_DATE('05/12/1979', 'DD/MM/YYYY'));
+INSERT INTO Paciente (cpf, nome, data_nascimento) VALUES ('10011122233', 'Sandra Reis', TO_DATE('30/08/1995', 'DD/MM/YYYY'));
+INSERT INTO Paciente (cpf, nome, data_nascimento) VALUES ('12312312300', 'Bruno Alves', TO_DATE('14/03/2001', 'DD/MM/YYYY'));
+INSERT INTO Paciente (cpf, nome, data_nascimento) VALUES ('32132132100', 'Carla Nunes', TO_DATE('19/11/1988', 'DD/MM/YYYY'));
+
+-- -------- Solicitacoes Processadas, datas futuras (prontas para agendar) --------
+INSERT INTO Solicitacao (id_solicitacao, id_medico_solicitante, id_paciente, id_tipo_cirurgia, data_solicitacao, hora_solicitacao, urgencia, status)
+VALUES (8, 'CRM-MG-1001', '77788899900', 1, TO_DATE('01/07/2026', 'DD/MM/YYYY'), 480, 'Eletiva', 'Processada');
+INSERT INTO Solicitacao (id_solicitacao, id_medico_solicitante, id_paciente, id_tipo_cirurgia, data_solicitacao, hora_solicitacao, urgencia, status)
+VALUES (9, 'CRM-MG-1002', '88899900011', 2, TO_DATE('01/07/2026', 'DD/MM/YYYY'), 600, 'Eletiva', 'Processada');
+INSERT INTO Solicitacao (id_solicitacao, id_medico_solicitante, id_paciente, id_tipo_cirurgia, data_solicitacao, hora_solicitacao, urgencia, status)
+VALUES (10, 'CRM-MG-1003', '99900011122', 3, TO_DATE('02/07/2026', 'DD/MM/YYYY'), 480, 'Urgencia', 'Processada');
+INSERT INTO Solicitacao (id_solicitacao, id_medico_solicitante, id_paciente, id_tipo_cirurgia, data_solicitacao, hora_solicitacao, urgencia, status)
+VALUES (11, 'CRM-MG-1006', '10011122233', 4, TO_DATE('02/07/2026', 'DD/MM/YYYY'), 1380, 'Eletiva', 'Processada');
+INSERT INTO Solicitacao (id_solicitacao, id_medico_solicitante, id_paciente, id_tipo_cirurgia, data_solicitacao, hora_solicitacao, urgencia, status)
+VALUES (12, 'CRM-MG-1001', '12312312300', 5, TO_DATE('03/07/2026', 'DD/MM/YYYY'), 600, 'Eletiva', 'Processada');
+INSERT INTO Solicitacao (id_solicitacao, id_medico_solicitante, id_paciente, id_tipo_cirurgia, data_solicitacao, hora_solicitacao, urgencia, status)
+VALUES (13, 'CRM-MG-1002', '32132132100', 1, TO_DATE('03/07/2026', 'DD/MM/YYYY'), 720, 'Eletiva', 'Processada');
+INSERT INTO Solicitacao (id_solicitacao, id_medico_solicitante, id_paciente, id_tipo_cirurgia, data_solicitacao, hora_solicitacao, urgencia, status)
+VALUES (14, 'CRM-MG-1003', '77788899900', 2, TO_DATE('06/07/2026', 'DD/MM/YYYY'), 480, 'Eletiva', 'Processada');
+INSERT INTO Solicitacao (id_solicitacao, id_medico_solicitante, id_paciente, id_tipo_cirurgia, data_solicitacao, hora_solicitacao, urgencia, status)
+VALUES (15, 'CRM-MG-1006', '88899900011', 3, TO_DATE('07/07/2026', 'DD/MM/YYYY'), 540, 'Eletiva', 'Processada');
+
+-- -------- Alguns agendamentos futuros (deixam solicitacoes 12-15 livres p/ agendar) --------
+-- Agendamento 9 comeca 23:00 e dura 90min (tipo 4): atravessa a meia-noite.
+INSERT INTO Agendamento (id_agendamento, id_solicitacao, num_sala, num_bloco, id_hospital, data_agendamento, hora_agendamento, status)
+VALUES (6, 8, 1, 1, 1, TO_DATE('01/07/2026', 'DD/MM/YYYY'), 480, 'Agendado');
+INSERT INTO Agendamento (id_agendamento, id_solicitacao, num_sala, num_bloco, id_hospital, data_agendamento, hora_agendamento, status)
+VALUES (7, 9, 2, 1, 1, TO_DATE('01/07/2026', 'DD/MM/YYYY'), 600, 'Agendado');
+INSERT INTO Agendamento (id_agendamento, id_solicitacao, num_sala, num_bloco, id_hospital, data_agendamento, hora_agendamento, status)
+VALUES (8, 10, 1, 1, 2, TO_DATE('02/07/2026', 'DD/MM/YYYY'), 480, 'Agendado');
+INSERT INTO Agendamento (id_agendamento, id_solicitacao, num_sala, num_bloco, id_hospital, data_agendamento, hora_agendamento, status)
+VALUES (9, 11, 1, 1, 3, TO_DATE('02/07/2026', 'DD/MM/YYYY'), 1380, 'Agendado');
+
 COMMIT;

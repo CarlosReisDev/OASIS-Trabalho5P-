@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Campo, EntidadeConfig } from '@/cadastros/configs'
-import { atualizar, criar, remover } from '@/lib/api'
+import type { Campo, Coluna, EntidadeConfig } from '@/cadastros/configs'
+import { atualizar, criar, listar, remover } from '@/lib/api'
 import { MSG } from '@/lib/mensagens'
 import { dataParaBR, dataParaInput, minutosParaHHMM } from '@/lib/tempo'
 import { useResource } from '@/hooks/useResource'
@@ -64,8 +64,29 @@ function CampoDinamico({
   )
 }
 
+// Carrega recursos referenciados por colunas FK (para resolver id -> nome).
+function useLookups(recursos: string[]) {
+  const chave = recursos.join('|')
+  const [mapa, setMapa] = useState<Record<string, any[]>>({})
+  useEffect(() => {
+    if (!chave) return
+    let vivo = true
+    Promise.all(
+      chave.split('|').map((r) => listar(r).then((d) => [r, d] as const).catch(() => [r, []] as const)),
+    ).then((pares) => {
+      if (vivo) setMapa(Object.fromEntries(pares))
+    })
+    return () => {
+      vivo = false
+    }
+  }, [chave])
+  return mapa
+}
+
 export function CrudPage({ config }: { config: EntidadeConfig }) {
   const { dados, carregando, recarregar } = useResource(config.endpoint)
+  const recursosRef = Array.from(new Set(config.colunas.filter((c) => c.ref).map((c) => c.ref!.recurso)))
+  const lookups = useLookups(recursosRef)
   const [aberto, setAberto] = useState(false)
   const [editando, setEditando] = useState<any | null>(null)
   const [form, setForm] = useState<Form>({})
@@ -132,10 +153,16 @@ export function CrudPage({ config }: { config: EntidadeConfig }) {
     }
   }
 
-  function renderCelula(tipo: string | undefined, valor: any) {
-    if (tipo === 'status') return <StatusBadge status={valor} />
-    if (tipo === 'hora') return minutosParaHHMM(valor)
-    if (tipo === 'data') return dataParaBR(valor)
+  function renderCelula(col: Coluna, valor: any) {
+    if (col.ref) {
+      const linha = (lookups[col.ref.recurso] ?? []).find(
+        (r) => String(r[col.ref!.chave]) === String(valor),
+      )
+      return linha ? col.ref.rotulo(linha) : (valor ?? '—')
+    }
+    if (col.tipo === 'status') return <StatusBadge status={valor} />
+    if (col.tipo === 'hora') return minutosParaHHMM(valor)
+    if (col.tipo === 'data') return dataParaBR(valor)
     return valor ?? '—'
   }
 
@@ -179,7 +206,7 @@ export function CrudPage({ config }: { config: EntidadeConfig }) {
             {dados.map((row, i) => (
               <TableRow key={i}>
                 {config.colunas.map((c) => (
-                  <TableCell key={c.chave}>{renderCelula(c.tipo, row[c.chave])}</TableCell>
+                  <TableCell key={c.chave}>{renderCelula(c, row[c.chave])}</TableCell>
                 ))}
                 {temAcoes && (
                   <TableCell className="text-right">

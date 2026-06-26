@@ -66,15 +66,18 @@ export function GradeHorarios({
     return <p className="text-sm text-muted-foreground">Nenhuma sala para os filtros atuais.</p>
   }
 
+  // Rotulo compacto: so a hora cheia quando passo>=60 (cabe em coluna estreita).
+  const rotuloSlot = (m: number) => (passo >= 60 ? String(Math.floor(m / 60)).padStart(2, '0') : minutosParaHHMM(m))
+
   return (
-    <div className="overflow-auto border rounded-lg">
-      <table className="text-xs border-collapse">
+    <div className="w-full overflow-x-auto border rounded-lg">
+      <table className="w-full table-fixed text-xs border-collapse">
         <thead>
           <tr>
-            <th className="sticky left-0 bg-muted z-10 px-3 py-2 text-left">Sala</th>
+            <th className="sticky left-0 bg-muted z-10 px-2 py-2 text-left w-24">Sala</th>
             {slots.map((s) => (
-              <th key={s} className="px-1 py-2 font-medium text-muted-foreground min-w-[48px]">
-                {minutosParaHHMM(s)}
+              <th key={s} className="px-0 py-2 font-medium text-muted-foreground text-center" title={minutosParaHHMM(s)}>
+                {rotuloSlot(s)}
               </th>
             ))}
           </tr>
@@ -82,15 +85,15 @@ export function GradeHorarios({
         <tbody>
           {salas.map((sala) => (
             <tr key={idSala(sala)} className="border-t">
-              <td className="sticky left-0 bg-card z-10 px-3 py-2 whitespace-nowrap font-medium border-r">
-                H{sala.ID_HOSPITAL} / B{sala.NUM_BLOCO} / S{sala.NUM_SALA}
+              <td className="sticky left-0 bg-card z-10 px-2 py-2 whitespace-nowrap font-medium border-r text-[11px] w-24">
+                H{sala.ID_HOSPITAL}/B{sala.NUM_BLOCO}/S{sala.NUM_SALA}
               </td>
               {slots.map((slot) => {
                 const ocupado = agNoSlot(agendamentos, sala, slot, passo, dataBase)
                 const selecionado =
                   selecao && idSala(selecao.sala) === idSala(sala) && selecao.hora === slot
                 return (
-                  <td key={slot} className="p-0.5">
+                  <td key={slot} className="p-px">
                     <button
                       type="button"
                       onClick={() =>
@@ -99,16 +102,14 @@ export function GradeHorarios({
                           : aoSelecionar?.(sala, slot)
                       }
                       className={cn(
-                        'h-8 w-full rounded transition-colors',
+                        'h-7 w-full rounded-sm transition-colors',
                         ocupado
-                          ? 'bg-status-ocupada/80 text-white cursor-pointer'
+                          ? 'bg-status-ocupada/80 hover:bg-status-ocupada cursor-pointer'
                           : 'bg-status-disponivel/15 hover:bg-status-disponivel/30 cursor-pointer',
                         selecionado && 'ring-2 ring-primary bg-primary/30',
                       )}
-                      title={ocupado ? `Ocupada #${ocupado.ID_AGENDAMENTO}` : 'Disponivel'}
-                    >
-                      {ocupado ? '•' : ''}
-                    </button>
+                      title={ocupado ? `Ocupada #${ocupado.ID_AGENDAMENTO} (${minutosParaHHMM(ocupado.HORA_AGENDAMENTO)})` : `Livre ${minutosParaHHMM(slot)}`}
+                    />
                   </td>
                 )
               })}

@@ -21,6 +21,8 @@ export interface Coluna {
   chave: string // chave MAIUSCULA da linha
   rotulo: string
   tipo?: 'status' | 'hora' | 'data'
+  // Resolve uma FK para um nome amigavel buscando em outro recurso.
+  ref?: { recurso: string; chave: string; rotulo: (row: any) => string }
 }
 
 export interface EntidadeConfig {
@@ -46,6 +48,12 @@ const URGENCIAS = [
   { valor: 'Emergencia', rotulo: 'Emergencia' },
 ]
 
+// Referencias para resolver FK -> nome nas tabelas.
+const refHospital = { recurso: '/api/hospitais', chave: 'ID_HOSPITAL', rotulo: (r: any) => r.NOME }
+const refPaciente = { recurso: '/api/pacientes', chave: 'CPF', rotulo: (r: any) => r.NOME }
+const refTipo = { recurso: '/api/tipos-cirurgia', chave: 'COD_CIRURGIA', rotulo: (r: any) => r.NOME }
+const refMedico = { recurso: '/api/medicos', chave: 'CRM', rotulo: (r: any) => r.NOME }
+
 export const CADASTROS: EntidadeConfig[] = [
   {
     slug: 'hospitais',
@@ -67,7 +75,7 @@ export const CADASTROS: EntidadeConfig[] = [
     titulo: 'Blocos',
     endpoint: '/api/blocos',
     colunas: [
-      { chave: 'ID_HOSPITAL', rotulo: 'Hospital' },
+      { chave: 'ID_HOSPITAL', rotulo: 'Hospital', ref: refHospital },
       { chave: 'NUM_BLOCO', rotulo: 'Bloco' },
       { chave: 'DESCRICAO', rotulo: 'Descricao' },
     ],
@@ -92,13 +100,22 @@ export const CADASTROS: EntidadeConfig[] = [
     titulo: 'Salas',
     endpoint: '/api/salas',
     colunas: [
-      { chave: 'ID_HOSPITAL', rotulo: 'Hospital' },
+      { chave: 'ID_HOSPITAL', rotulo: 'Hospital', ref: refHospital },
       { chave: 'NUM_BLOCO', rotulo: 'Bloco' },
       { chave: 'NUM_SALA', rotulo: 'Sala' },
       { chave: 'STATUS', rotulo: 'Status', tipo: 'status' },
     ],
     campos: [
-      { nome: 'id_hospital', rotulo: 'Hospital (codigo)', tipo: 'number', obrigatorio: true, numerico: true },
+      {
+        nome: 'id_hospital',
+        rotulo: 'Hospital',
+        tipo: 'select',
+        obrigatorio: true,
+        numerico: true,
+        origem: '/api/hospitais',
+        origemValor: 'ID_HOSPITAL',
+        origemRotulo: (r) => `${r.ID_HOSPITAL} - ${r.NOME}`,
+      },
       { nome: 'num_bloco', rotulo: 'Bloco (numero)', tipo: 'number', obrigatorio: true, numerico: true },
       { nome: 'num_sala', rotulo: 'Sala (numero)', tipo: 'number', obrigatorio: true, numerico: true },
       {
@@ -170,8 +187,8 @@ export const CADASTROS: EntidadeConfig[] = [
     endpoint: '/api/solicitacoes',
     colunas: [
       { chave: 'ID_SOLICITACAO', rotulo: 'Codigo' },
-      { chave: 'ID_PACIENTE', rotulo: 'Paciente (CPF)' },
-      { chave: 'ID_TIPO_CIRURGIA', rotulo: 'Tipo' },
+      { chave: 'ID_PACIENTE', rotulo: 'Paciente', ref: refPaciente },
+      { chave: 'ID_TIPO_CIRURGIA', rotulo: 'Tipo', ref: refTipo },
       { chave: 'DATA_SOLICITACAO', rotulo: 'Data', tipo: 'data' },
       { chave: 'HORA_SOLICITACAO', rotulo: 'Hora', tipo: 'hora' },
       { chave: 'URGENCIA', rotulo: 'Urgencia' },
@@ -226,7 +243,7 @@ export const CADASTROS: EntidadeConfig[] = [
     colunas: [
       { chave: 'ID_AGENDAMENTO', rotulo: 'Codigo' },
       { chave: 'ID_SOLICITACAO', rotulo: 'Solicitacao' },
-      { chave: 'ID_HOSPITAL', rotulo: 'Hospital' },
+      { chave: 'ID_HOSPITAL', rotulo: 'Hospital', ref: refHospital },
       { chave: 'NUM_BLOCO', rotulo: 'Bloco' },
       { chave: 'NUM_SALA', rotulo: 'Sala' },
       { chave: 'DATA_AGENDAMENTO', rotulo: 'Data', tipo: 'data' },
@@ -244,7 +261,16 @@ export const CADASTROS: EntidadeConfig[] = [
         origemValor: 'ID_SOLICITACAO',
         origemRotulo: (r) => `#${r.ID_SOLICITACAO} (paciente ${r.ID_PACIENTE}, ${r.STATUS})`,
       },
-      { nome: 'id_hospital', rotulo: 'Hospital (codigo)', tipo: 'number', obrigatorio: true, numerico: true },
+      {
+        nome: 'id_hospital',
+        rotulo: 'Hospital',
+        tipo: 'select',
+        obrigatorio: true,
+        numerico: true,
+        origem: '/api/hospitais',
+        origemValor: 'ID_HOSPITAL',
+        origemRotulo: (r) => `${r.ID_HOSPITAL} - ${r.NOME}`,
+      },
       { nome: 'num_bloco', rotulo: 'Bloco (numero)', tipo: 'number', obrigatorio: true, numerico: true },
       { nome: 'num_sala', rotulo: 'Sala (numero)', tipo: 'number', obrigatorio: true, numerico: true },
       { nome: 'data_agendamento', rotulo: 'Data', tipo: 'date', obrigatorio: true },
@@ -265,7 +291,7 @@ export const CADASTROS: EntidadeConfig[] = [
     endpoint: '/api/medicos-participantes',
     colunas: [
       { chave: 'ID_AGENDAMENTO', rotulo: 'Agendamento' },
-      { chave: 'ID_MEDICO', rotulo: 'Medico (CRM)' },
+      { chave: 'ID_MEDICO', rotulo: 'Medico', ref: refMedico },
     ],
     campos: [
       {

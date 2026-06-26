@@ -277,11 +277,23 @@ export function Ocupacao() {
                   <DialogTitle>Reagendar #{slot.ocupado.ID_AGENDAMENTO}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3">
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="space-y-1.5">
-                      <Label>Hospital</Label>
-                      <Input value={reForm.hospital} onChange={(e) => setReForm({ ...reForm, hospital: e.target.value })} />
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label>Hospital</Label>
+                    <Select
+                      value={reForm.hospital || undefined}
+                      onValueChange={(v) => setReForm({ ...reForm, hospital: v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Selecione o hospital" /></SelectTrigger>
+                      <SelectContent>
+                        {hospitais.dados.map((h) => (
+                          <SelectItem key={h.ID_HOSPITAL} value={String(h.ID_HOSPITAL)}>
+                            {h.NOME}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
                       <Label>Bloco</Label>
                       <Input value={reForm.bloco} onChange={(e) => setReForm({ ...reForm, bloco: e.target.value })} />
