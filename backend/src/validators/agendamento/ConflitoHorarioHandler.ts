@@ -23,11 +23,11 @@ export class ConflitoHorarioHandler extends Handler {
           AND a.id_hospital = :id_hospital
           AND a.status     != 'Cancelado'
           AND (:id_ag IS NULL OR a.id_agendamento != :id_ag)
-          AND ( (:data_nova - DATE '1970-01-01') * 1440 + :hora_nova )
+          AND ( (CAST(:data_nova AS DATE) - DATE '1970-01-01') * 1440 + :hora_nova )
               < ( (a.data_agendamento - DATE '1970-01-01') * 1440
                   + a.hora_agendamento + NVL(t.duracao_estimada_minutos, 0) )
           AND ( (a.data_agendamento - DATE '1970-01-01') * 1440 + a.hora_agendamento )
-              < ( (:data_nova - DATE '1970-01-01') * 1440 + :hora_nova + :duracao_nova )`,
+              < ( (CAST(:data_nova AS DATE) - DATE '1970-01-01') * 1440 + :hora_nova + :duracao_nova )`,
       {
         num_sala: dados.num_sala,
         num_bloco: dados.num_bloco,

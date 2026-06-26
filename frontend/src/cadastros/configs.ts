@@ -20,7 +20,7 @@ export interface Campo {
 export interface Coluna {
   chave: string // chave MAIUSCULA da linha
   rotulo: string
-  tipo?: 'status' | 'hora' | 'data'
+  tipo?: 'status' | 'statusSolicitacao' | 'urgencia' | 'hora' | 'data'
   // Resolve uma FK para um nome amigavel buscando em outro recurso.
   ref?: { recurso: string; chave: string; rotulo: (row: any) => string }
 }
@@ -191,8 +191,8 @@ export const CADASTROS: EntidadeConfig[] = [
       { chave: 'ID_TIPO_CIRURGIA', rotulo: 'Tipo', ref: refTipo },
       { chave: 'DATA_SOLICITACAO', rotulo: 'Data', tipo: 'data' },
       { chave: 'HORA_SOLICITACAO', rotulo: 'Hora', tipo: 'hora' },
-      { chave: 'URGENCIA', rotulo: 'Urgencia' },
-      { chave: 'STATUS', rotulo: 'Status', tipo: 'status' },
+      { chave: 'URGENCIA', rotulo: 'Urgencia', tipo: 'urgencia' },
+      { chave: 'STATUS', rotulo: 'Status', tipo: 'statusSolicitacao' },
     ],
     campos: [
       {

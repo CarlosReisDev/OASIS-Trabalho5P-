@@ -7,6 +7,7 @@ import { MSG } from '@/lib/mensagens'
 import { dataParaBR, dataParaInput, minutosParaHHMM } from '@/lib/tempo'
 import { useResource } from '@/hooks/useResource'
 import { StatusBadge } from '@/components/StatusBadge'
+import { UrgenciaBadge } from '@/components/UrgenciaBadge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -153,7 +154,7 @@ export function CrudPage({ config }: { config: EntidadeConfig }) {
     }
   }
 
-  function renderCelula(col: Coluna, valor: any) {
+  function renderCelula(col: Coluna, valor: any, row: any) {
     if (col.ref) {
       const linha = (lookups[col.ref.recurso] ?? []).find(
         (r) => String(r[col.ref!.chave]) === String(valor),
@@ -161,6 +162,14 @@ export function CrudPage({ config }: { config: EntidadeConfig }) {
       return linha ? col.ref.rotulo(linha) : (valor ?? '—')
     }
     if (col.tipo === 'status') return <StatusBadge status={valor} />
+    if (col.tipo === 'statusSolicitacao') {
+      // Se ja virou (ou foi) agendamento, mostra a situacao real em vez do status cru.
+      if (valor === 'Processada' && row?.SITUACAO_AGENDA) {
+        return <StatusBadge status={row.SITUACAO_AGENDA} />
+      }
+      return <StatusBadge status={valor} />
+    }
+    if (col.tipo === 'urgencia') return <UrgenciaBadge urgencia={valor} />
     if (col.tipo === 'hora') return minutosParaHHMM(valor)
     if (col.tipo === 'data') return dataParaBR(valor)
     return valor ?? '—'
@@ -206,7 +215,7 @@ export function CrudPage({ config }: { config: EntidadeConfig }) {
             {dados.map((row, i) => (
               <TableRow key={i}>
                 {config.colunas.map((c) => (
-                  <TableCell key={c.chave}>{renderCelula(c, row[c.chave])}</TableCell>
+                  <TableCell key={c.chave}>{renderCelula(c, row[c.chave], row)}</TableCell>
                 ))}
                 {temAcoes && (
                   <TableCell className="text-right">

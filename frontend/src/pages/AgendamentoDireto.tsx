@@ -36,13 +36,8 @@ export function AgendamentoDireto() {
   const processadas = solicitacoes.dados.filter((s) => s.STATUS === 'Processada')
   const solSel = solicitacoes.dados.find((s) => String(s.ID_SOLICITACAO) === solicitacao)
 
-  // Processadas que ainda nao têm agendamento ativo (as agendadas não aparecem).
-  const agendadas = useMemo(() => {
-    const s = new Set<number>()
-    for (const a of agendamentos.dados) if (a.STATUS !== 'Cancelado') s.add(a.ID_SOLICITACAO)
-    return s
-  }, [agendamentos.dados])
-  const processadasDisponiveis = processadas.filter((s) => !agendadas.has(s.ID_SOLICITACAO))
+  // Disponiveis: Processada e sem nenhum agendamento (nem cancelado -> terminal).
+  const processadasDisponiveis = processadas.filter((s) => !s.SITUACAO_AGENDA)
 
   const salasHospital = useMemo(
     () => salas.dados.filter((s) => String(s.ID_HOSPITAL) === hospital),

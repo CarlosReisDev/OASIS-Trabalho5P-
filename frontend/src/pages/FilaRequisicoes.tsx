@@ -7,6 +7,7 @@ import { MSG } from '@/lib/mensagens'
 import { dataParaBR, minutosParaHHMM } from '@/lib/tempo'
 import { useResource } from '@/hooks/useResource'
 import { StatusBadge } from '@/components/StatusBadge'
+import { UrgenciaBadge } from '@/components/UrgenciaBadge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -28,10 +29,15 @@ import {
 
 export function FilaRequisicoes() {
   const { dados, recarregar } = useResource('/api/solicitacoes')
+  const tipos = useResource('/api/tipos-cirurgia')
   const navigate = useNavigate()
   const [busca, setBusca] = useState('')
   const [status, setStatus] = useState('Todos')
   const [urgencia, setUrgencia] = useState('Todas')
+
+  const nomeTipo = (cod: number) => tipos.dados.find((t) => t.COD_CIRURGIA === cod)?.NOME
+  // 'Agendada' / 'Cancelada' (so quando ja tem agendamento); senao null.
+  const situacao = (s: any) => (s.STATUS === 'Processada' ? s.SITUACAO_AGENDA : null)
 
   const filtradas = dados.filter((s) => {
     if (busca && !String(s.ID_PACIENTE).includes(busca)) return false
@@ -110,11 +116,11 @@ export function FilaRequisicoes() {
               <TableRow key={s.ID_SOLICITACAO}>
                 <TableCell>{s.ID_SOLICITACAO}</TableCell>
                 <TableCell>{s.ID_PACIENTE}</TableCell>
-                <TableCell>{s.ID_TIPO_CIRURGIA}</TableCell>
+                <TableCell>{s.ID_TIPO_CIRURGIA}{nomeTipo(s.ID_TIPO_CIRURGIA) ? ` - ${nomeTipo(s.ID_TIPO_CIRURGIA)}` : ''}</TableCell>
                 <TableCell>{dataParaBR(s.DATA_SOLICITACAO)}</TableCell>
                 <TableCell>{minutosParaHHMM(s.HORA_SOLICITACAO)}</TableCell>
-                <TableCell>{s.URGENCIA ?? '—'}</TableCell>
-                <TableCell><StatusBadge status={s.STATUS} /></TableCell>
+                <TableCell><UrgenciaBadge urgencia={s.URGENCIA} /></TableCell>
+                <TableCell><StatusBadge status={situacao(s) ?? s.STATUS} /></TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">
                     {s.STATUS === 'Pendente' && (
@@ -131,7 +137,7 @@ export function FilaRequisicoes() {
                         </Button>
                       </>
                     )}
-                    {s.STATUS === 'Processada' && (
+                    {s.STATUS === 'Processada' && !situacao(s) && (
                       <Button
                         size="sm"
                         variant="outline"

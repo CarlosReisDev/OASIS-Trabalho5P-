@@ -90,14 +90,10 @@ export function Ocupacao() {
     [agsHospital, data],
   )
 
-  // Processadas que AINDA NAO têm agendamento ativo (as agendadas não aparecem).
-  const agendadas = useMemo(() => {
-    const set = new Set<number>()
-    for (const a of agendamentos.dados) if (a.STATUS !== 'Cancelado') set.add(a.ID_SOLICITACAO)
-    return set
-  }, [agendamentos.dados])
+  // Disponiveis para agendar: Processada e sem nenhum agendamento (nem cancelado,
+  // pois o cancelado e terminal e bloqueia novo agendamento).
   const processadasDisponiveis = solicitacoes.dados.filter(
-    (s) => s.STATUS === 'Processada' && !agendadas.has(s.ID_SOLICITACAO),
+    (s) => s.STATUS === 'Processada' && !s.SITUACAO_AGENDA,
   )
 
   const reagendados = agsDoDia.filter((a) => a.STATUS === 'Reagendado').length

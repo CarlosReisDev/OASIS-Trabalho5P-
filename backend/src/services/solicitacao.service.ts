@@ -3,17 +3,29 @@ import { validarTransicaoSolicitacao } from '../domain/status/transicoes.js';
 import { AppError } from '../utils/AppError.js';
 import { parseData } from '../utils/parse.js';
 
+// situacao_agenda: 'Agendada' (tem agendamento ativo), 'Cancelada' (so tem
+// agendamento cancelado -> nao pode reagendar) ou NULL (livre para agendar).
+// O status no banco continua 'Processada'; isto e so para exibicao/regras de UI.
 const SELECT_BASE = `
-  SELECT id_solicitacao, id_medico_solicitante, id_paciente, id_tipo_cirurgia,
-         data_solicitacao, hora_solicitacao, urgencia, status
-    FROM Solicitacao`;
+  SELECT s.id_solicitacao, s.id_medico_solicitante, s.id_paciente, s.id_tipo_cirurgia,
+         s.data_solicitacao, s.hora_solicitacao, s.urgencia, s.status,
+         (CASE
+            WHEN EXISTS (SELECT 1 FROM Agendamento ag
+                          WHERE ag.id_solicitacao = s.id_solicitacao AND ag.status != 'Cancelado')
+              THEN 'Agendada'
+            WHEN EXISTS (SELECT 1 FROM Agendamento ag
+                          WHERE ag.id_solicitacao = s.id_solicitacao)
+              THEN 'Cancelada'
+            ELSE NULL
+          END) AS situacao_agenda
+    FROM Solicitacao s`;
 
 export async function listar() {
-  return consultar(`${SELECT_BASE} ORDER BY id_solicitacao`);
+  return consultar(`${SELECT_BASE} ORDER BY s.id_solicitacao`);
 }
 
 export async function buscar(id: number) {
-  const r = await consultar(`${SELECT_BASE} WHERE id_solicitacao = :id`, { id });
+  const r = await consultar(`${SELECT_BASE} WHERE s.id_solicitacao = :id`, { id });
   if (r.length === 0) throw new AppError(404, `Solicitacao ${id} nao encontrada.`);
   return r[0];
 }
