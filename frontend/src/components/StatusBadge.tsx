@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { rotuloStatus } from '@/lib/status'
 
 // Cores de status do professor: Disponivel=verde, Ocupada=vermelho, atencao=ambar.
 const CORES: Record<string, string> = {
@@ -17,7 +18,7 @@ export function StatusBadge({ status }: { status: string | null | undefined }) {
   if (!status) return <span className="text-muted-foreground">—</span>
   return (
     <Badge className={cn('border', CORES[status] ?? 'bg-muted text-muted-foreground')}>
-      {status}
+      {rotuloStatus(status)}
     </Badge>
   )
 }

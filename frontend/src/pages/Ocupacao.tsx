@@ -354,7 +354,7 @@ export function Ocupacao() {
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-2">
-                <Label>Solicitacao processada</Label>
+                <Label>Solicitacao aguardando agendamento</Label>
                 <Select value={solEscolhida || undefined} onValueChange={setSolEscolhida}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a solicitacao" />
@@ -369,7 +369,7 @@ export function Ocupacao() {
                 </Select>
                 {processadasDisponiveis.length === 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Nenhuma solicitacao processada disponivel (sem agendamento). Processe uma na Fila.
+                    Nenhuma solicitacao aguardando agendamento (sem agendamento). Processe uma na Fila.
                   </p>
                 )}
               </div>

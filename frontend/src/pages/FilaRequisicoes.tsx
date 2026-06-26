@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import { rotuloStatus } from '@/lib/status'
 import { atualizar } from '@/lib/api'
 import { MSG } from '@/lib/mensagens'
 import { dataParaBR, minutosParaHHMM } from '@/lib/tempo'
@@ -69,7 +70,7 @@ export function FilaRequisicoes() {
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent>
             {['Todos', 'Pendente', 'Processada', 'Rejeitada'].map((o) => (
-              <SelectItem key={o} value={o}>{o}</SelectItem>
+              <SelectItem key={o} value={o}>{rotuloStatus(o)}</SelectItem>
             ))}
           </SelectContent>
         </Select>

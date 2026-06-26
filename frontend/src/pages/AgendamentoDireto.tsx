@@ -105,7 +105,7 @@ export function AgendamentoDireto() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Solicitacao (Processada) *</Label>
+              <Label>Solicitacao (Aguardando Agendamento) *</Label>
               <Select value={solicitacao || undefined} onValueChange={setSolicitacao}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a solicitacao" />
@@ -120,7 +120,7 @@ export function AgendamentoDireto() {
               </Select>
               {processadasDisponiveis.length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Nenhuma solicitacao processada disponivel. Processe uma na Fila de Requisicoes.
+                  Nenhuma solicitacao aguardando agendamento. Processe uma na Fila de Requisicoes.
                 </p>
               )}
             </div>
