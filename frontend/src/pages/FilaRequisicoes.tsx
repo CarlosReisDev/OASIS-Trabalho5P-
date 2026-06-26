@@ -38,10 +38,12 @@ export function FilaRequisicoes() {
   const nomeTipo = (cod: number) => tipos.dados.find((t) => t.COD_CIRURGIA === cod)?.NOME
   // 'Agendada' / 'Cancelada' (so quando ja tem agendamento); senao null.
   const situacao = (s: any) => (s.STATUS === 'Processada' ? s.SITUACAO_AGENDA : null)
+  // Status "real" para exibir/filtrar: usa a situacao de agenda quando existir.
+  const statusEfetivo = (s: any) => situacao(s) ?? s.STATUS
 
   const filtradas = dados.filter((s) => {
     if (busca && !String(s.ID_PACIENTE).includes(busca)) return false
-    if (status !== 'Todos' && s.STATUS !== status) return false
+    if (status !== 'Todos' && statusEfetivo(s) !== status) return false
     if (urgencia !== 'Todas' && s.URGENCIA !== urgencia) return false
     return true
   })
@@ -75,7 +77,7 @@ export function FilaRequisicoes() {
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {['Todos', 'Pendente', 'Processada', 'Rejeitada'].map((o) => (
+            {['Todos', 'Pendente', 'Processada', 'Agendada', 'Cancelada', 'Rejeitada'].map((o) => (
               <SelectItem key={o} value={o}>{rotuloStatus(o)}</SelectItem>
             ))}
           </SelectContent>
