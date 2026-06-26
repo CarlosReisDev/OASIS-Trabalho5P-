@@ -3,10 +3,11 @@ import { CalendarPlus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, atualizar, criar } from '@/lib/api'
 import { MSG } from '@/lib/mensagens'
-import { dataParaBR, dataParaInput, hhmmParaMinutos, minutosParaHHMM } from '@/lib/tempo'
+import { dataParaBR, minutosParaHHMM } from '@/lib/tempo'
 import { useResource } from '@/hooks/useResource'
 import { usePolling } from '@/hooks/usePolling'
 import { GradeHorarios } from '@/components/GradeHorarios'
+import { useConfirm } from '@/components/ConfirmProvider'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,6 +36,7 @@ interface SlotSel {
 }
 
 export function Ocupacao() {
+  const confirmar = useConfirm()
   const hospitais = useResource('/api/hospitais')
   const salas = useResource('/api/salas')
   const agendamentos = useResource('/api/agendamentos')
@@ -45,12 +47,10 @@ export function Ocupacao() {
   const [detalhes, setDetalhes] = useState<Record<number, any>>({})
   const [slot, setSlot] = useState<SlotSel | null>(null)
 
-  // estados do diálogo
+  // estados do diálogo / reagendamento
   const [solEscolhida, setSolEscolhida] = useState('')
   const [agendando, setAgendando] = useState(false)
-  const [modoReag, setModoReag] = useState(false)
-  const [reForm, setReForm] = useState({ hospital: '', bloco: '', sala: '', data: '', hora: '' })
-  const [salvandoReag, setSalvandoReag] = useState(false)
+  const [reagendando, setReagendando] = useState<any | null>(null) // agendamento sendo movido
 
   // Mapa ID_AGENDAMENTO -> dados completos (paciente, medico, tipo) para o detalhe.
   async function carregarDetalhes() {
@@ -117,7 +117,6 @@ export function Ocupacao() {
   function fecharDialog() {
     setSlot(null)
     setSolEscolhida('')
-    setModoReag(false)
   }
 
   async function agendarNoSlot() {
@@ -146,47 +145,46 @@ export function Ocupacao() {
     }
   }
 
+  // Entra no modo "mover": fecha o dialog e deixa a grade clicavel para o destino.
   function iniciarReag() {
-    const a = slot!.ocupado
-    setReForm({
-      hospital: String(a.ID_HOSPITAL),
-      bloco: String(a.NUM_BLOCO),
-      sala: String(a.NUM_SALA),
-      data: dataParaInput(a.DATA_AGENDAMENTO),
-      hora: minutosParaHHMM(a.HORA_AGENDAMENTO),
-    })
-    setModoReag(true)
+    setReagendando(slot!.ocupado)
+    setSlot(null)
   }
 
-  async function salvarReag() {
-    const a = slot!.ocupado
-    if (!reForm.hospital || !reForm.bloco || !reForm.sala || !reForm.data || !reForm.hora) {
-      toast.error(MSG.MSG06)
-      return
-    }
-    setSalvandoReag(true)
+  // Clique num horario livre da grade enquanto reagenda -> grava no novo slot.
+  async function reagendarNoSlot(sala: any, hora: number) {
+    const a = reagendando
+    const ok = await confirmar({
+      titulo: 'Reagendar cirurgia',
+      mensagem: `Mover cirurgia #${a.ID_AGENDAMENTO} para Sala ${sala.NUM_SALA}/Bloco ${sala.NUM_BLOCO} as ${minutosParaHHMM(hora)} de ${dataParaBR(data)}?`,
+      confirmarTexto: 'Mover',
+    })
+    if (!ok) return
     try {
       await atualizar(`/api/agendamentos/${a.ID_AGENDAMENTO}`, {
         id_solicitacao: a.ID_SOLICITACAO,
-        num_sala: Number(reForm.sala),
-        num_bloco: Number(reForm.bloco),
-        id_hospital: Number(reForm.hospital),
-        data_agendamento: reForm.data,
-        hora_agendamento: hhmmParaMinutos(reForm.hora),
+        num_sala: sala.NUM_SALA,
+        num_bloco: sala.NUM_BLOCO,
+        id_hospital: sala.ID_HOSPITAL,
+        data_agendamento: data,
+        hora_agendamento: hora,
       })
       toast.success(MSG.MSG04)
-      fecharDialog()
+      setReagendando(null)
       agendamentos.recarregar()
     } catch {
       /* toast no interceptor (MSG07) */
-    } finally {
-      setSalvandoReag(false)
     }
   }
 
   async function cancelarCirurgia() {
     const a = slot!.ocupado
-    if (!confirm('Confirmar cancelamento desta cirurgia?')) return
+    const ok = await confirmar({
+      mensagem: 'Confirmar cancelamento desta cirurgia?',
+      confirmarTexto: 'Cancelar cirurgia',
+      destrutivo: true,
+    })
+    if (!ok) return
     try {
       await atualizar(`/api/agendamentos/${a.ID_AGENDAMENTO}/status`, { status: 'Cancelado' })
       toast.success(MSG.MSG03)
@@ -247,6 +245,17 @@ export function Ocupacao() {
         ))}
       </div>
 
+      {reagendando && (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-primary bg-primary/10 px-3 py-2 text-sm">
+          <span>
+            <b>Reagendando #{reagendando.ID_AGENDAMENTO}</b>
+            {detalhes[reagendando.ID_AGENDAMENTO] ? ` — ${detalhes[reagendando.ID_AGENDAMENTO].PACIENTE}` : ''}
+            : clique num horario livre na grade (troque de dia/hospital se precisar).
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => setReagendando(null)}>Cancelar</Button>
+        </div>
+      )}
+
       <Card>
         <CardHeader><CardTitle>Grade sala × horario — {dataParaBR(data)}</CardTitle></CardHeader>
         <CardContent>
@@ -258,8 +267,14 @@ export function Ocupacao() {
             salas={salasHospital}
             agendamentos={agsHospital}
             dataBase={data}
-            aoClicarOcupado={(a) => { setSlot({ sala: a, hora: a.HORA_AGENDAMENTO, ocupado: a }); setModoReag(false) }}
-            aoSelecionar={(sala, hora) => { setSlot({ sala, hora }); setModoReag(false) }}
+            aoClicarOcupado={(a) =>
+              reagendando
+                ? toast.error('Escolha um horario livre (verde) para mover.')
+                : setSlot({ sala: a, hora: a.HORA_AGENDAMENTO, ocupado: a })
+            }
+            aoSelecionar={(sala, hora) =>
+              reagendando ? reagendarNoSlot(sala, hora) : setSlot({ sala, hora })
+            }
           />
         </CardContent>
       </Card>
@@ -267,81 +282,31 @@ export function Ocupacao() {
       <Dialog open={!!slot} onOpenChange={(o) => !o && fecharDialog()}>
         <DialogContent>
           {slot?.ocupado ? (
-            modoReag ? (
-              <>
-                <DialogHeader>
-                  <DialogTitle>Reagendar #{slot.ocupado.ID_AGENDAMENTO}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label>Hospital</Label>
-                    <Select
-                      value={reForm.hospital || undefined}
-                      onValueChange={(v) => setReForm({ ...reForm, hospital: v })}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Selecione o hospital" /></SelectTrigger>
-                      <SelectContent>
-                        {hospitais.dados.map((h) => (
-                          <SelectItem key={h.ID_HOSPITAL} value={String(h.ID_HOSPITAL)}>
-                            {h.NOME}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1.5">
-                      <Label>Bloco</Label>
-                      <Input value={reForm.bloco} onChange={(e) => setReForm({ ...reForm, bloco: e.target.value })} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Sala</Label>
-                      <Input value={reForm.sala} onChange={(e) => setReForm({ ...reForm, sala: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Data</Label>
-                    <Input type="date" value={reForm.data} onChange={(e) => setReForm({ ...reForm, data: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Hora</Label>
-                    <Input type="time" value={reForm.hora} onChange={(e) => setReForm({ ...reForm, hora: e.target.value })} />
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="outline" onClick={() => setModoReag(false)}>Voltar</Button>
-                  <Button onClick={salvarReag} disabled={salvandoReag}>
-                    {salvandoReag ? 'Salvando...' : 'Salvar reagendamento'}
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <DialogHeader>
-                  <DialogTitle>
-                    Agendamento #{slot.ocupado.ID_AGENDAMENTO} — {minutosParaHHMM(slot.ocupado.HORA_AGENDAMENTO)}
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-1 text-sm">
-                  {det ? (
-                    <>
-                      <p><b>Paciente:</b> {det.PACIENTE}</p>
-                      <p><b>Cirurgia:</b> {det.TIPO_CIRURGIA} ({det.DURACAO_ESTIMADA_MINUTOS} min)</p>
-                      <p><b>Medico solicitante:</b> {det.MEDICO_SOLICITANTE}</p>
-                    </>
-                  ) : (
-                    <p><b>Solicitacao:</b> #{slot.ocupado.ID_SOLICITACAO}</p>
-                  )}
-                  <p><b>Local:</b> H{slot.ocupado.ID_HOSPITAL} / B{slot.ocupado.NUM_BLOCO} / S{slot.ocupado.NUM_SALA}</p>
-                  <p><b>Data:</b> {dataParaBR(slot.ocupado.DATA_AGENDAMENTO)}</p>
-                  <p className="flex items-center gap-2"><b>Status:</b> <StatusBadge status={slot.ocupado.STATUS} /></p>
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="destructive" onClick={cancelarCirurgia}>Cancelar cirurgia</Button>
-                  <Button onClick={iniciarReag}>Reagendar</Button>
-                </div>
-              </>
-            )
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  Agendamento #{slot.ocupado.ID_AGENDAMENTO} — {minutosParaHHMM(slot.ocupado.HORA_AGENDAMENTO)}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-1 text-sm">
+                {det ? (
+                  <>
+                    <p><b>Paciente:</b> {det.PACIENTE}</p>
+                    <p><b>Cirurgia:</b> {det.TIPO_CIRURGIA} ({det.DURACAO_ESTIMADA_MINUTOS} min)</p>
+                    <p><b>Medico solicitante:</b> {det.MEDICO_SOLICITANTE}</p>
+                  </>
+                ) : (
+                  <p><b>Solicitacao:</b> #{slot.ocupado.ID_SOLICITACAO}</p>
+                )}
+                <p><b>Local:</b> H{slot.ocupado.ID_HOSPITAL} / B{slot.ocupado.NUM_BLOCO} / S{slot.ocupado.NUM_SALA}</p>
+                <p><b>Data:</b> {dataParaBR(slot.ocupado.DATA_AGENDAMENTO)}</p>
+                <p className="flex items-center gap-2"><b>Status:</b> <StatusBadge status={slot.ocupado.STATUS} /></p>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="destructive" onClick={cancelarCirurgia}>Cancelar cirurgia</Button>
+                <Button onClick={iniciarReag}>Reagendar</Button>
+              </div>
+            </>
           ) : (
             <>
               <DialogHeader>

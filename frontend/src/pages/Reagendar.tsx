@@ -6,6 +6,7 @@ import { MSG } from '@/lib/mensagens'
 import { dataParaBR, dataParaInput, hhmmParaMinutos, minutosParaHHMM } from '@/lib/tempo'
 import { useResource } from '@/hooks/useResource'
 import { StatusBadge } from '@/components/StatusBadge'
+import { useConfirm } from '@/components/ConfirmProvider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -21,6 +22,7 @@ import {
 
 // Versao simples (formulario). Gancho: trocar por drag-and-drop num quadro de horarios.
 export function Reagendar() {
+  const confirmar = useConfirm()
   const { dados, recarregar } = useResource('/api/agendamentos')
   const [sel, setSel] = useState<any | null>(null)
   const [sala, setSala] = useState('')
@@ -80,7 +82,12 @@ export function Reagendar() {
 
   async function cancelar() {
     if (!sel) return
-    if (!confirm('Confirmar cancelamento desta cirurgia?')) return
+    const ok = await confirmar({
+      mensagem: 'Confirmar cancelamento desta cirurgia?',
+      confirmarTexto: 'Cancelar cirurgia',
+      destrutivo: true,
+    })
+    if (!ok) return
     try {
       await atualizar(`/api/agendamentos/${sel.ID_AGENDAMENTO}/status`, { status: 'Cancelado' })
       toast.success(MSG.MSG03)

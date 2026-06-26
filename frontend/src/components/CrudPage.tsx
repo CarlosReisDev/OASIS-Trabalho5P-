@@ -8,6 +8,7 @@ import { dataParaBR, dataParaInput, minutosParaHHMM } from '@/lib/tempo'
 import { useResource } from '@/hooks/useResource'
 import { StatusBadge } from '@/components/StatusBadge'
 import { UrgenciaBadge } from '@/components/UrgenciaBadge'
+import { useConfirm } from '@/components/ConfirmProvider'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -85,6 +86,7 @@ function useLookups(recursos: string[]) {
 }
 
 export function CrudPage({ config }: { config: EntidadeConfig }) {
+  const confirmar = useConfirm()
   const { dados, carregando, recarregar } = useResource(config.endpoint)
   const recursosRef = Array.from(new Set(config.colunas.filter((c) => c.ref).map((c) => c.ref!.recurso)))
   const lookups = useLookups(recursosRef)
@@ -144,7 +146,12 @@ export function CrudPage({ config }: { config: EntidadeConfig }) {
   }
 
   async function excluir(row: any) {
-    if (!confirm('Confirmar exclusao deste registro?')) return
+    const ok = await confirmar({
+      mensagem: 'Confirmar exclusao deste registro?',
+      confirmarTexto: 'Excluir',
+      destrutivo: true,
+    })
+    if (!ok) return
     try {
       await remover(`${config.endpoint}/${config.caminhoId(row)}`)
       toast.success('Registro removido.')
