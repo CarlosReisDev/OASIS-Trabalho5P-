@@ -36,16 +36,22 @@ export function AgendamentoDireto() {
   const processadas = solicitacoes.dados.filter((s) => s.STATUS === 'Processada')
   const solSel = solicitacoes.dados.find((s) => String(s.ID_SOLICITACAO) === solicitacao)
 
+  // Processadas que ainda nao têm agendamento ativo (as agendadas não aparecem).
+  const agendadas = useMemo(() => {
+    const s = new Set<number>()
+    for (const a of agendamentos.dados) if (a.STATUS !== 'Cancelado') s.add(a.ID_SOLICITACAO)
+    return s
+  }, [agendamentos.dados])
+  const processadasDisponiveis = processadas.filter((s) => !agendadas.has(s.ID_SOLICITACAO))
+
   const salasHospital = useMemo(
     () => salas.dados.filter((s) => String(s.ID_HOSPITAL) === hospital),
     [salas.dados, hospital],
   )
-  const agsDoDia = useMemo(
-    () =>
-      agendamentos.dados.filter(
-        (a) => String(a.ID_HOSPITAL) === hospital && String(a.DATA_AGENDAMENTO).slice(0, 10) === data,
-      ),
-    [agendamentos.dados, hospital, data],
+  // Todos os agendamentos do hospital (qualquer dia) — a grade calcula o vira-dia.
+  const agsHospital = useMemo(
+    () => agendamentos.dados.filter((a) => String(a.ID_HOSPITAL) === hospital),
+    [agendamentos.dados, hospital],
   )
 
   function continuar() {
@@ -105,16 +111,16 @@ export function AgendamentoDireto() {
                   <SelectValue placeholder="Selecione a solicitacao" />
                 </SelectTrigger>
                 <SelectContent>
-                  {processadas.map((s) => (
+                  {processadasDisponiveis.map((s) => (
                     <SelectItem key={s.ID_SOLICITACAO} value={String(s.ID_SOLICITACAO)}>
                       #{s.ID_SOLICITACAO} — paciente {s.ID_PACIENTE} — {dataParaBR(s.DATA_SOLICITACAO)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {processadas.length === 0 && (
+              {processadasDisponiveis.length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Nenhuma solicitacao Processada. Processe uma na Fila de Requisicoes.
+                  Nenhuma solicitacao processada disponivel. Processe uma na Fila de Requisicoes.
                 </p>
               )}
             </div>
@@ -175,7 +181,8 @@ export function AgendamentoDireto() {
         </p>
         <GradeHorarios
           salas={salasHospital}
-          agendamentos={agsDoDia}
+          agendamentos={agsHospital}
+          dataBase={data}
           selecao={selecao}
           aoSelecionar={(sala, hora) => setSelecao({ sala, hora })}
           aoClicarOcupado={() => toast.error(MSG.MSG07)}

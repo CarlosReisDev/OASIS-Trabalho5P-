@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { atualizar } from '@/lib/api'
 import { MSG } from '@/lib/mensagens'
@@ -37,6 +38,20 @@ export function Reagendar() {
     setData(dataParaInput(a.DATA_AGENDAMENTO))
     setHora(minutosParaHHMM(a.HORA_AGENDAMENTO))
   }
+
+  // Pre-selecao via ?agendamento=ID (vindo do Painel de Ocupacao).
+  const [params] = useSearchParams()
+  const jaPreselecionou = useRef(false)
+  useEffect(() => {
+    if (jaPreselecionou.current) return
+    const id = params.get('agendamento')
+    if (!id || dados.length === 0) return
+    const a = dados.find((x) => String(x.ID_AGENDAMENTO) === id)
+    if (a) {
+      selecionar(a)
+      jaPreselecionou.current = true
+    }
+  }, [params, dados])
 
   async function salvarReagendamento() {
     if (!sel || !sala || !bloco || !hospital || !data || !hora) {

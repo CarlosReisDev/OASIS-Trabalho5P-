@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   Activity,
   BarChart3,
@@ -36,14 +36,12 @@ const ITENS: ItemNav[] = [
 export function AppShell() {
   const { perfil, sair } = usePerfil()
   const navigate = useNavigate()
-  const location = useLocation()
-  const [menuMobile, setMenuMobile] = useState(false)
-
-  // Modo foco (T02): esconde a sidebar na tela de agendamento direto.
-  const modoFoco = location.pathname.startsWith('/agendamento')
+  const [hover, setHover] = useState(false) // sidebar revelada por hover na borda
+  const [fixada, setFixada] = useState(false) // toggle (toque/teclado) pelo hamburguer
 
   if (!perfil) return null
 
+  const aberta = hover || fixada
   const itensVisiveis = ITENS.filter((i) => i.perfis.includes(perfil))
   const rotuloPerfil = PERFIS.find((p) => p.valor === perfil)?.rotulo ?? perfil
 
@@ -53,16 +51,16 @@ export function AppShell() {
       isActive ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-accent',
     )
 
+  const fecharNav = () => {
+    setHover(false)
+    setFixada(false)
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Topbar */}
-      <header className="sticky top-0 z-30 flex items-center gap-3 border-b bg-card px-4 h-14">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden"
-          onClick={() => setMenuMobile((v) => !v)}
-        >
+      <header className="sticky top-0 z-50 flex items-center gap-3 border-b bg-card px-4 h-14">
+        <Button variant="ghost" size="icon" onClick={() => setFixada((v) => !v)} title="Menu">
           <Menu className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2 font-semibold text-primary">
@@ -80,47 +78,52 @@ export function AppShell() {
         </div>
       </header>
 
-      <div className="flex flex-1">
-        {/* Sidebar */}
-        {!modoFoco && (
-          <aside
-            className={cn(
-              'w-60 shrink-0 border-r bg-card p-3 space-y-1',
-              'md:block',
-              menuMobile ? 'block absolute z-20 h-full' : 'hidden',
-            )}
-          >
-            {itensVisiveis.map((item) => (
-              <NavLink key={item.to} to={item.to} className={linkClass} onClick={() => setMenuMobile(false)}>
-                <item.icon className="h-4 w-4" />
-                {item.label}
+      {/* Faixa sensivel na borda esquerda: encostar o mouse revela a sidebar */}
+      <div
+        className="fixed left-0 top-14 bottom-0 w-2 z-40"
+        onMouseEnter={() => setHover(true)}
+      />
+      {/* Dica visual discreta de que ha um menu na borda */}
+      {!aberta && (
+        <div className="fixed left-0 top-1/2 -translate-y-1/2 z-30 h-16 w-1.5 rounded-r bg-primary/40 pointer-events-none" />
+      )}
+
+      {/* Sidebar overlay (desliza) */}
+      <aside
+        onMouseLeave={() => setHover(false)}
+        className={cn(
+          'fixed left-0 top-14 bottom-0 w-60 z-40 border-r bg-card p-3 space-y-1 overflow-y-auto shadow-lg',
+          'transition-transform duration-200',
+          aberta ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
+        {itensVisiveis.map((item) => (
+          <NavLink key={item.to} to={item.to} className={linkClass} onClick={fecharNav}>
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </NavLink>
+        ))}
+
+        {perfil === 'Gestor' && (
+          <div className="pt-3">
+            <p className="flex items-center gap-2 px-3 pb-1 text-xs font-semibold uppercase text-muted-foreground">
+              <Database className="h-3.5 w-3.5" /> Cadastros
+            </p>
+            {CADASTROS.map((c) => (
+              <NavLink key={c.slug} to={`/cadastros/${c.slug}`} className={linkClass} onClick={fecharNav}>
+                {c.titulo}
               </NavLink>
             ))}
-
-            {perfil === 'Gestor' && (
-              <div className="pt-3">
-                <p className="flex items-center gap-2 px-3 pb-1 text-xs font-semibold uppercase text-muted-foreground">
-                  <Database className="h-3.5 w-3.5" /> Cadastros
-                </p>
-                {CADASTROS.map((c) => (
-                  <NavLink
-                    key={c.slug}
-                    to={`/cadastros/${c.slug}`}
-                    className={linkClass}
-                    onClick={() => setMenuMobile(false)}
-                  >
-                    {c.titulo}
-                  </NavLink>
-                ))}
-              </div>
-            )}
-          </aside>
+          </div>
         )}
+      </aside>
 
-        <main className="flex-1 p-4 md:p-6 overflow-x-auto">
-          <Outlet />
-        </main>
-      </div>
+      {/* Scrim quando fixada (toque): clicar fora fecha */}
+      {fixada && <div className="fixed inset-0 top-14 z-30 bg-black/20" onClick={fecharNav} />}
+
+      <main className="flex-1 p-4 md:p-6 overflow-x-auto">
+        <Outlet />
+      </main>
     </div>
   )
 }

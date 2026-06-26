@@ -7,17 +7,22 @@ import { DadosAgendamento, validarAgendamento } from '../validators/agendamento/
 // FACADE — orquestra validacao (Chain), regra de status (State) e SQL.
 // Controllers nao conhecem detalhes de transacao nem das consultas.
 
+// Inclui a duracao (via Solicitacao -> TipoCirurgia) para a grade pintar todos
+// os slots que a cirurgia ocupa, nao so o de inicio.
 const SELECT_BASE = `
-  SELECT id_agendamento, id_solicitacao, num_sala, num_bloco, id_hospital,
-         data_agendamento, hora_agendamento, status
-    FROM Agendamento`;
+  SELECT a.id_agendamento, a.id_solicitacao, a.num_sala, a.num_bloco, a.id_hospital,
+         a.data_agendamento, a.hora_agendamento, a.status,
+         t.duracao_estimada_minutos AS duracao
+    FROM Agendamento a
+    JOIN Solicitacao s  ON s.id_solicitacao = a.id_solicitacao
+    JOIN TipoCirurgia t ON t.cod_cirurgia   = s.id_tipo_cirurgia`;
 
 export async function listar() {
-  return consultar(`${SELECT_BASE} ORDER BY id_agendamento`);
+  return consultar(`${SELECT_BASE} ORDER BY a.id_agendamento`);
 }
 
 export async function buscar(id: number) {
-  const r = await consultar(`${SELECT_BASE} WHERE id_agendamento = :id`, { id });
+  const r = await consultar(`${SELECT_BASE} WHERE a.id_agendamento = :id`, { id });
   if (r.length === 0) throw new AppError(404, `Agendamento ${id} nao encontrado.`);
   return r[0];
 }
