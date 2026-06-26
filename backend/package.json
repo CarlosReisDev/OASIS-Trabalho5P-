@@ -1,0 +1,27 @@
+{
+  "name": "oasis-backend",
+  "version": "1.0.0",
+  "description": "API REST do sistema OASIS de agendamento cirurgico",
+  "type": "module",
+  "scripts": {
+    "dev": "LD_LIBRARY_PATH=\"$PWD/instantclient_23_26:$LD_LIBRARY_PATH\" tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "LD_LIBRARY_PATH=\"$PWD/instantclient_23_26:$LD_LIBRARY_PATH\" node dist/server.js",
+    "db:setup": "LD_LIBRARY_PATH=\"$PWD/instantclient_23_26:$LD_LIBRARY_PATH\" tsx setup.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "oracledb": "^6.5.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "@types/oracledb": "^7.0.1",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,0 +1,264 @@
+import { useState } from 'react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import type { Campo, EntidadeConfig } from '@/cadastros/configs'
+import { atualizar, criar, remover } from '@/lib/api'
+import { MSG } from '@/lib/mensagens'
+import { dataParaBR, dataParaInput, minutosParaHHMM } from '@/lib/tempo'
+import { useResource } from '@/hooks/useResource'
+import { StatusBadge } from '@/components/StatusBadge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+
+type Form = Record<string, string>
+
+function CampoDinamico({
+  campo,
+  value,
+  onChange,
+}: {
+  campo: Campo
+  value: string
+  onChange: (v: string) => void
+}) {
+  const { dados } = useResource(campo.origem ?? null)
+  return (
+    <Select value={value || undefined} onValueChange={onChange}>
+      <SelectTrigger>
+        <SelectValue placeholder={`Selecione ${campo.rotulo.toLowerCase()}`} />
+      </SelectTrigger>
+      <SelectContent>
+        {dados.map((r) => {
+          const val = String(r[campo.origemValor as string])
+          return (
+            <SelectItem key={val} value={val}>
+              {campo.origemRotulo ? campo.origemRotulo(r) : val}
+            </SelectItem>
+          )
+        })}
+      </SelectContent>
+    </Select>
+  )
+}
+
+export function CrudPage({ config }: { config: EntidadeConfig }) {
+  const { dados, carregando, recarregar } = useResource(config.endpoint)
+  const [aberto, setAberto] = useState(false)
+  const [editando, setEditando] = useState<any | null>(null)
+  const [form, setForm] = useState<Form>({})
+  const [salvando, setSalvando] = useState(false)
+
+  function abrirNovo() {
+    setEditando(null)
+    setForm({})
+    setAberto(true)
+  }
+
+  function abrirEdicao(row: any) {
+    setEditando(row)
+    const inicial: Form = {}
+    for (const campo of config.campos) {
+      const bruto = row[campo.nome.toUpperCase()]
+      inicial[campo.nome] =
+        campo.tipo === 'date' ? dataParaInput(bruto) : bruto === null || bruto === undefined ? '' : String(bruto)
+    }
+    setForm(inicial)
+    setAberto(true)
+  }
+
+  async function salvar() {
+    const corpo: Record<string, unknown> = {}
+    for (const campo of config.campos) {
+      const v = (form[campo.nome] ?? '').trim()
+      if (!v) {
+        if (campo.obrigatorio) {
+          toast.error(MSG.MSG06)
+          return
+        }
+        corpo[campo.nome] = null
+        continue
+      }
+      corpo[campo.nome] = campo.numerico ? Number(v) : v
+    }
+    setSalvando(true)
+    try {
+      if (editando) {
+        await atualizar(`${config.endpoint}/${config.caminhoId(editando)}`, corpo)
+        toast.success('Registro atualizado.')
+      } else {
+        await criar(config.endpoint, corpo)
+        toast.success('Registro criado.')
+      }
+      setAberto(false)
+      recarregar()
+    } catch {
+      // toast ja exibido pelo interceptor
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  async function excluir(row: any) {
+    if (!confirm('Confirmar exclusao deste registro?')) return
+    try {
+      await remover(`${config.endpoint}/${config.caminhoId(row)}`)
+      toast.success('Registro removido.')
+      recarregar()
+    } catch {
+      // toast ja exibido
+    }
+  }
+
+  function renderCelula(tipo: string | undefined, valor: any) {
+    if (tipo === 'status') return <StatusBadge status={valor} />
+    if (tipo === 'hora') return minutosParaHHMM(valor)
+    if (tipo === 'data') return dataParaBR(valor)
+    return valor ?? '—'
+  }
+
+  const temAcoes = !config.somenteLeitura
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">{config.titulo}</h1>
+          <p className="text-sm text-muted-foreground">{dados.length} registro(s)</p>
+        </div>
+        {!config.somenteLeitura && (
+          <Button onClick={abrirNovo}>
+            <Plus className="h-4 w-4" /> Novo
+          </Button>
+        )}
+      </div>
+
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {config.colunas.map((c) => (
+                <TableHead key={c.chave}>{c.rotulo}</TableHead>
+              ))}
+              {temAcoes && <TableHead className="w-24 text-right">Acoes</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {!carregando && dados.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={config.colunas.length + (temAcoes ? 1 : 0)}
+                  className="text-center text-muted-foreground py-8"
+                >
+                  Nenhum registro.
+                </TableCell>
+              </TableRow>
+            )}
+            {dados.map((row, i) => (
+              <TableRow key={i}>
+                {config.colunas.map((c) => (
+                  <TableCell key={c.chave}>{renderCelula(c.tipo, row[c.chave])}</TableCell>
+                ))}
+                {temAcoes && (
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      {!config.semAtualizar && (
+                        <Button variant="ghost" size="icon" onClick={() => abrirEdicao(row)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => excluir(row)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+
+      <Dialog open={aberto} onOpenChange={setAberto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editando ? 'Editar' : 'Novo'} — {config.titulo}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {config.campos.map((campo) => (
+              <div key={campo.nome} className="space-y-1.5">
+                <Label htmlFor={campo.nome}>
+                  {campo.rotulo}
+                  {campo.obrigatorio && <span className="text-destructive"> *</span>}
+                </Label>
+                {campo.origem ? (
+                  <CampoDinamico
+                    campo={campo}
+                    value={form[campo.nome] ?? ''}
+                    onChange={(v) => setForm((f) => ({ ...f, [campo.nome]: v }))}
+                  />
+                ) : campo.tipo === 'select' ? (
+                  <Select
+                    value={form[campo.nome] || undefined}
+                    onValueChange={(v) => setForm((f) => ({ ...f, [campo.nome]: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={`Selecione ${campo.rotulo.toLowerCase()}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {campo.opcoes?.map((o) => (
+                        <SelectItem key={o.valor} value={o.valor}>
+                          {o.rotulo}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id={campo.nome}
+                    type={campo.tipo === 'number' ? 'number' : campo.tipo === 'date' ? 'date' : 'text'}
+                    value={form[campo.nome] ?? ''}
+                    onChange={(e) => setForm((f) => ({ ...f, [campo.nome]: e.target.value }))}
+                  />
+                )}
+                {campo.ajuda && <p className="text-xs text-muted-foreground">{campo.ajuda}</p>}
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setAberto(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={salvar} disabled={salvando}>
+              {salvando ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
