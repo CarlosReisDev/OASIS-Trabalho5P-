@@ -66,10 +66,10 @@ export function criarCrud(cfg: CrudConfig) {
 
   async function atualizar(id: ChavePk, body: any) {
     const binds = montarBinds(body, colsUpdate, datas);
-    binds.__id = id;
+    binds.pk_id = id; // bind do WHERE (Oracle nao aceita nome iniciando com "_")
     const sets = colsUpdate.map((c) => `${c} = :${c}`).join(', ');
     const afetadas = await emTransacao(async (conn) => {
-      const r = await conn.execute(`UPDATE ${tabela} SET ${sets} WHERE ${pk} = :__id`, binds);
+      const r = await conn.execute(`UPDATE ${tabela} SET ${sets} WHERE ${pk} = :pk_id`, binds);
       return r.rowsAffected ?? 0;
     });
     if (afetadas === 0) throw new AppError(404, `${tabela} (${pk}=${id}) nao encontrado.`);

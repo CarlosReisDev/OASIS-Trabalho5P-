@@ -41,14 +41,16 @@ function CampoDinamico({
   campo,
   value,
   onChange,
+  disabled,
 }: {
   campo: Campo
   value: string
   onChange: (v: string) => void
+  disabled?: boolean
 }) {
   const { dados } = useResource(campo.origem ?? null)
   return (
-    <Select value={value || undefined} onValueChange={onChange}>
+    <Select value={value || undefined} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger>
         <SelectValue placeholder={`Selecione ${campo.rotulo.toLowerCase()}`} />
       </SelectTrigger>
@@ -252,7 +254,9 @@ export function CrudPage({ config }: { config: EntidadeConfig }) {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            {config.campos.map((campo) => (
+            {config.campos.map((campo) => {
+              const travado = !!editando && !!campo.bloqueadoNaEdicao
+              return (
               <div key={campo.nome} className="space-y-1.5">
                 <Label htmlFor={campo.nome}>
                   {campo.rotulo}
@@ -263,11 +267,13 @@ export function CrudPage({ config }: { config: EntidadeConfig }) {
                     campo={campo}
                     value={form[campo.nome] ?? ''}
                     onChange={(v) => setForm((f) => ({ ...f, [campo.nome]: v }))}
+                    disabled={travado}
                   />
                 ) : campo.tipo === 'select' ? (
                   <Select
                     value={form[campo.nome] || undefined}
                     onValueChange={(v) => setForm((f) => ({ ...f, [campo.nome]: v }))}
+                    disabled={travado}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={`Selecione ${campo.rotulo.toLowerCase()}`} />
@@ -290,7 +296,8 @@ export function CrudPage({ config }: { config: EntidadeConfig }) {
                 )}
                 {campo.ajuda && <p className="text-xs text-muted-foreground">{campo.ajuda}</p>}
               </div>
-            ))}
+              )
+            })}
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setAberto(false)}>

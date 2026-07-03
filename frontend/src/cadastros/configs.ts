@@ -2,6 +2,8 @@
 // LEITURA: o Oracle devolve colunas em MAIUSCULAS (ID_HOSPITAL, NOME...).
 // ESCRITA: o backend espera os nomes das colunas em minusculas (id_hospital...).
 
+import { dataParaBR, minutosParaHHMM } from '@/lib/tempo'
+
 export type CampoTipo = 'text' | 'number' | 'date' | 'select'
 
 export interface Campo {
@@ -15,6 +17,7 @@ export interface Campo {
   origem?: string // recurso para select dinamico (ex.: '/api/hospitais')
   origemValor?: string // chave (MAIUSCULA) usada como value
   origemRotulo?: (row: any) => string
+  bloqueadoNaEdicao?: boolean // desabilita o campo ao editar (parte da PK)
 }
 
 export interface Coluna {
@@ -52,7 +55,6 @@ const URGENCIAS = [
 const refHospital = { recurso: '/api/hospitais', chave: 'ID_HOSPITAL', rotulo: (r: any) => r.NOME }
 const refPaciente = { recurso: '/api/pacientes', chave: 'CPF', rotulo: (r: any) => r.NOME }
 const refTipo = { recurso: '/api/tipos-cirurgia', chave: 'COD_CIRURGIA', rotulo: (r: any) => r.NOME }
-const refMedico = { recurso: '/api/medicos', chave: 'CRM', rotulo: (r: any) => r.NOME }
 
 export const CADASTROS: EntidadeConfig[] = [
   {
@@ -89,8 +91,9 @@ export const CADASTROS: EntidadeConfig[] = [
         origem: '/api/hospitais',
         origemValor: 'ID_HOSPITAL',
         origemRotulo: (r) => `${r.ID_HOSPITAL} - ${r.NOME}`,
+        bloqueadoNaEdicao: true,
       },
-      { nome: 'num_bloco', rotulo: 'Numero do bloco', tipo: 'number', obrigatorio: true, numerico: true },
+      { nome: 'num_bloco', rotulo: 'Numero do bloco', tipo: 'number', obrigatorio: true, numerico: true, bloqueadoNaEdicao: true },
       { nome: 'descricao', rotulo: 'Descricao', tipo: 'text' },
     ],
     caminhoId: (r) => `${r.ID_HOSPITAL}/${r.NUM_BLOCO}`,
@@ -115,9 +118,10 @@ export const CADASTROS: EntidadeConfig[] = [
         origem: '/api/hospitais',
         origemValor: 'ID_HOSPITAL',
         origemRotulo: (r) => `${r.ID_HOSPITAL} - ${r.NOME}`,
+        bloqueadoNaEdicao: true,
       },
-      { nome: 'num_bloco', rotulo: 'Bloco (numero)', tipo: 'number', obrigatorio: true, numerico: true },
-      { nome: 'num_sala', rotulo: 'Sala (numero)', tipo: 'number', obrigatorio: true, numerico: true },
+      { nome: 'num_bloco', rotulo: 'Bloco (numero)', tipo: 'number', obrigatorio: true, numerico: true, bloqueadoNaEdicao: true },
+      { nome: 'num_sala', rotulo: 'Sala (numero)', tipo: 'number', obrigatorio: true, numerico: true, bloqueadoNaEdicao: true },
       {
         nome: 'status',
         rotulo: 'Status',
@@ -142,7 +146,7 @@ export const CADASTROS: EntidadeConfig[] = [
       { chave: 'PERFIL', rotulo: 'Perfil' },
     ],
     campos: [
-      { nome: 'crm', rotulo: 'CRM', tipo: 'text', obrigatorio: true },
+      { nome: 'crm', rotulo: 'CRM', tipo: 'text', obrigatorio: true, bloqueadoNaEdicao: true },
       { nome: 'nome', rotulo: 'Nome', tipo: 'text', obrigatorio: true },
       { nome: 'email', rotulo: 'Email', tipo: 'text', obrigatorio: true },
       { nome: 'especialidade', rotulo: 'Especialidade', tipo: 'text', obrigatorio: true },
@@ -160,7 +164,7 @@ export const CADASTROS: EntidadeConfig[] = [
       { chave: 'DATA_NASCIMENTO', rotulo: 'Nascimento', tipo: 'data' },
     ],
     campos: [
-      { nome: 'cpf', rotulo: 'CPF', tipo: 'text', obrigatorio: true },
+      { nome: 'cpf', rotulo: 'CPF', tipo: 'text', obrigatorio: true, bloqueadoNaEdicao: true },
       { nome: 'nome', rotulo: 'Nome', tipo: 'text', obrigatorio: true },
       { nome: 'data_nascimento', rotulo: 'Data de nascimento', tipo: 'date', obrigatorio: true },
     ],
@@ -290,8 +294,13 @@ export const CADASTROS: EntidadeConfig[] = [
     titulo: 'Medicos Participantes',
     endpoint: '/api/medicos-participantes',
     colunas: [
-      { chave: 'ID_AGENDAMENTO', rotulo: 'Agendamento' },
-      { chave: 'ID_MEDICO', rotulo: 'Medico', ref: refMedico },
+      { chave: 'ID_AGENDAMENTO', rotulo: 'Agend.' },
+      { chave: 'DATA_AGENDAMENTO', rotulo: 'Data', tipo: 'data' },
+      { chave: 'HORA_AGENDAMENTO', rotulo: 'Hora', tipo: 'hora' },
+      { chave: 'NUM_SALA', rotulo: 'Sala' },
+      { chave: 'STATUS', rotulo: 'Status', tipo: 'status' },
+      { chave: 'MEDICO_NOME', rotulo: 'Medico' },
+      { chave: 'ESPECIALIDADE', rotulo: 'Especialidade' },
     ],
     campos: [
       {
@@ -302,7 +311,9 @@ export const CADASTROS: EntidadeConfig[] = [
         numerico: true,
         origem: '/api/agendamentos',
         origemValor: 'ID_AGENDAMENTO',
-        origemRotulo: (r) => `#${r.ID_AGENDAMENTO} (sala ${r.NUM_SALA}, ${r.STATUS})`,
+        origemRotulo: (r) =>
+          `#${r.ID_AGENDAMENTO} · ${dataParaBR(r.DATA_AGENDAMENTO)} ${minutosParaHHMM(r.HORA_AGENDAMENTO)} · sala ${r.NUM_SALA} · ${r.PACIENTE_NOME} · ${r.STATUS}`,
+        bloqueadoNaEdicao: true,
       },
       {
         nome: 'id_medico',
@@ -311,10 +322,9 @@ export const CADASTROS: EntidadeConfig[] = [
         obrigatorio: true,
         origem: '/api/medicos',
         origemValor: 'CRM',
-        origemRotulo: (r) => `${r.CRM} - ${r.NOME} (${r.PERFIL})`,
+        origemRotulo: (r) => `${r.CRM} - ${r.NOME} · ${r.ESPECIALIDADE} (${r.PERFIL})`,
       },
     ],
-    semAtualizar: true,
     caminhoId: (r) => `${r.ID_AGENDAMENTO}/${r.ID_MEDICO}`,
   },
   {

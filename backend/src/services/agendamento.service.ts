@@ -12,10 +12,12 @@ import { DadosAgendamento, validarAgendamento } from '../validators/agendamento/
 const SELECT_BASE = `
   SELECT a.id_agendamento, a.id_solicitacao, a.num_sala, a.num_bloco, a.id_hospital,
          a.data_agendamento, a.hora_agendamento, a.status,
-         t.duracao_estimada_minutos AS duracao
+         t.duracao_estimada_minutos AS duracao,
+         p.nome AS paciente_nome
     FROM Agendamento a
     JOIN Solicitacao s  ON s.id_solicitacao = a.id_solicitacao
-    JOIN TipoCirurgia t ON t.cod_cirurgia   = s.id_tipo_cirurgia`;
+    JOIN TipoCirurgia t ON t.cod_cirurgia   = s.id_tipo_cirurgia
+    JOIN Paciente p     ON p.cpf            = s.id_paciente`;
 
 export async function listar() {
   return consultar(`${SELECT_BASE} ORDER BY a.id_agendamento`);

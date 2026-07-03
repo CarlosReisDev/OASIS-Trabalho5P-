@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { usePerfil } from '@/context/PerfilContext'
 import { AppShell } from '@/components/AppShell'
 import { Login } from '@/pages/Login'
+import { MeusAtendimentos } from '@/pages/MeusAtendimentos'
 import { Requisicao } from '@/pages/Requisicao'
 import { AgendamentoDireto } from '@/pages/AgendamentoDireto'
 import { FilaRequisicoes } from '@/pages/FilaRequisicoes'
@@ -17,7 +18,8 @@ export function App() {
     <Routes>
       <Route path="/login" element={perfil ? <Navigate to="/" replace /> : <Login />} />
       <Route element={perfil ? <AppShell /> : <Navigate to="/login" replace />}>
-        <Route index element={<Navigate to={perfil === 'Gestor' ? '/fila' : '/requisicao'} replace />} />
+        <Route index element={<Navigate to={perfil === 'Gestor' ? '/fila' : '/meus'} replace />} />
+        <Route path="/meus" element={<MeusAtendimentos />} />
         <Route path="/requisicao" element={<Requisicao />} />
         <Route path="/agendamento" element={<AgendamentoDireto />} />
         <Route path="/fila" element={<FilaRequisicoes />} />

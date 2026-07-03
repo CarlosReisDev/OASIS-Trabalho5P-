@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { criar } from '@/lib/api'
+import { usePerfil } from '@/context/PerfilContext'
 import { MSG } from '@/lib/mensagens'
 import { dataParaBR, hhmmParaMinutos } from '@/lib/tempo'
 import { useResource } from '@/hooks/useResource'
@@ -18,11 +19,12 @@ import {
 } from '@/components/ui/select'
 
 export function Requisicao() {
+  const { medico: medicoLogado } = usePerfil()
   const pacientes = useResource('/api/pacientes')
   const medicos = useResource('/api/medicos')
   const tipos = useResource('/api/tipos-cirurgia')
 
-  const [medico, setMedico] = useState('')
+  const [medico, setMedico] = useState(medicoLogado?.crm ?? '')
   const [paciente, setPaciente] = useState('')
   const [tipo, setTipo] = useState('')
   const [data, setData] = useState('')

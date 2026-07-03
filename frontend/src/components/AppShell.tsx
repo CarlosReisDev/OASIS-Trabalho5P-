@@ -3,8 +3,10 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   Activity,
   BarChart3,
+  Bell,
   CalendarClock,
   CalendarPlus,
+  ClipboardCheck,
   ClipboardList,
   Database,
   ListChecks,
@@ -25,16 +27,17 @@ interface ItemNav {
 }
 
 const ITENS: ItemNav[] = [
+  { to: '/meus', label: 'Meus atendimentos', icon: ClipboardCheck, perfis: ['Clinico', 'Cirurgiao'] },
   { to: '/requisicao', label: 'Requisicao', icon: ClipboardList, perfis: ['Clinico', 'Cirurgiao', 'Gestor'] },
   { to: '/agendamento', label: 'Agendamento direto', icon: CalendarPlus, perfis: ['Cirurgiao', 'Gestor'] },
   { to: '/fila', label: 'Fila de requisicoes', icon: ListChecks, perfis: ['Gestor'] },
-  { to: '/reagendar', label: 'Reagendar / Cancelar', icon: CalendarClock, perfis: ['Gestor'] },
+  { to: '/reagendar', label: 'Reagendar / Cancelar', icon: CalendarClock, perfis: ['Cirurgiao', 'Gestor'] },
   { to: '/ocupacao', label: 'Painel de ocupacao', icon: Activity, perfis: ['Gestor'] },
   { to: '/relatorios', label: 'Relatorios', icon: BarChart3, perfis: ['Gestor'] },
 ]
 
 export function AppShell() {
-  const { perfil, sair } = usePerfil()
+  const { perfil, medico, sair } = usePerfil()
   const navigate = useNavigate()
   const [hover, setHover] = useState(false) // sidebar revelada por hover na borda
   const [fixada, setFixada] = useState(false) // toggle (toque/teclado) pelo hamburguer
@@ -71,7 +74,15 @@ export function AppShell() {
           Dados sinteticos — nao use informacoes reais de pacientes
         </span>
         <div className="ml-auto flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">{rotuloPerfil}</span>
+          {perfil === 'Gestor' && (
+            <Button variant="ghost" size="icon" title="Notificacoes"
+              onClick={() => navigate('/cadastros/notificacoes')}>
+              <Bell className="h-5 w-5" />
+            </Button>
+          )}
+          <span className="text-sm text-muted-foreground">
+            {medico ? `${medico.nome} · ${rotuloPerfil}` : rotuloPerfil}
+          </span>
           <Button variant="outline" size="sm" onClick={() => { sair(); navigate('/login') }}>
             <LogOut className="h-4 w-4" /> Sair
           </Button>
@@ -109,7 +120,7 @@ export function AppShell() {
             <p className="flex items-center gap-2 px-3 pb-1 text-xs font-semibold uppercase text-muted-foreground">
               <Database className="h-3.5 w-3.5" /> Cadastros
             </p>
-            {CADASTROS.map((c) => (
+            {CADASTROS.filter((c) => c.slug !== 'notificacoes').map((c) => (
               <NavLink key={c.slug} to={`/cadastros/${c.slug}`} className={linkClass} onClick={fecharNav}>
                 {c.titulo}
               </NavLink>

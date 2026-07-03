@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 import { criar } from '@/lib/api'
+import { usePerfil } from '@/context/PerfilContext'
 import { MSG } from '@/lib/mensagens'
 import { dataParaBR, minutosParaHHMM } from '@/lib/tempo'
 import { useResource } from '@/hooks/useResource'
@@ -20,6 +21,7 @@ import {
 import { Input } from '@/components/ui/input'
 
 export function AgendamentoDireto() {
+  const { perfil, medico } = usePerfil()
   const [params] = useSearchParams()
   const solicitacoes = useResource('/api/solicitacoes')
   const hospitais = useResource('/api/hospitais')
@@ -64,7 +66,7 @@ export function AgendamentoDireto() {
     }
     setConfirmando(true)
     try {
-      await criar('/api/agendamentos', {
+      const ag = await criar('/api/agendamentos', {
         id_solicitacao: Number(solicitacao),
         num_sala: selecao.sala.NUM_SALA,
         num_bloco: selecao.sala.NUM_BLOCO,
@@ -72,6 +74,18 @@ export function AgendamentoDireto() {
         data_agendamento: data,
         hora_agendamento: selecao.hora,
       })
+      // Cirurgiao que agenda no quadro vira participante -> a cirurgia fica "dele"
+      // (habilita reagendar/cancelar so a propria). O trigger alcada_cirurgiao valida.
+      if (perfil === 'Cirurgiao' && medico && ag?.ID_AGENDAMENTO) {
+        try {
+          await criar('/api/medicos-participantes', {
+            id_agendamento: ag.ID_AGENDAMENTO,
+            id_medico: medico.crm,
+          })
+        } catch {
+          /* toast no interceptor; agendamento ja foi criado */
+        }
+      }
       toast.success(MSG.MSG02)
       setEtapa(1)
       setSelecao(null)

@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { atualizar } from '@/lib/api'
+import { usePerfil } from '@/context/PerfilContext'
 import { MSG } from '@/lib/mensagens'
 import { dataParaBR, dataParaInput, hhmmParaMinutos, minutosParaHHMM } from '@/lib/tempo'
 import { useResource } from '@/hooks/useResource'
@@ -23,8 +24,23 @@ import {
 // Versao simples (formulario). Gancho: trocar por drag-and-drop num quadro de horarios.
 export function Reagendar() {
   const confirmar = useConfirm()
+  const { perfil, medico } = usePerfil()
   const { dados, recarregar } = useResource('/api/agendamentos')
+  const participantes = useResource('/api/medicos-participantes')
   const [sel, setSel] = useState<any | null>(null)
+
+  // Cirurgiao so enxerga/reagenda as cirurgias em que participa (as "dele").
+  // Gestor enxerga todas.
+  const soDoMedico = perfil === 'Cirurgiao'
+  const agendamentos = useMemo(() => {
+    if (!soDoMedico || !medico) return dados
+    const meus = new Set(
+      participantes.dados
+        .filter((p) => p.ID_MEDICO === medico.crm)
+        .map((p) => p.ID_AGENDAMENTO),
+    )
+    return dados.filter((a) => meus.has(a.ID_AGENDAMENTO))
+  }, [dados, participantes.dados, soDoMedico, medico])
   const [sala, setSala] = useState('')
   const [bloco, setBloco] = useState('')
   const [hospital, setHospital] = useState('')
@@ -47,13 +63,13 @@ export function Reagendar() {
   useEffect(() => {
     if (jaPreselecionou.current) return
     const id = params.get('agendamento')
-    if (!id || dados.length === 0) return
-    const a = dados.find((x) => String(x.ID_AGENDAMENTO) === id)
+    if (!id || agendamentos.length === 0) return
+    const a = agendamentos.find((x) => String(x.ID_AGENDAMENTO) === id)
     if (a) {
       selecionar(a)
       jaPreselecionou.current = true
     }
-  }, [params, dados])
+  }, [params, agendamentos])
 
   async function salvarReagendamento() {
     if (!sel || !sala || !bloco || !hospital || !data || !hora) {
@@ -104,6 +120,7 @@ export function Reagendar() {
         <h1 className="text-xl font-semibold">Reagendar / Cancelar</h1>
         <p className="text-sm text-muted-foreground">
           Selecione uma cirurgia, edite a alocacao ou cancele (cancelamento e logico e libera a sala).
+          {soDoMedico && ' Voce so pode reagendar as cirurgias em que participa.'}
         </p>
       </div>
 
@@ -121,7 +138,16 @@ export function Reagendar() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {dados.map((a) => (
+              {agendamentos.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-sm text-muted-foreground">
+                    {soDoMedico
+                      ? 'Voce ainda nao participa de nenhuma cirurgia para reagendar.'
+                      : 'Nenhuma cirurgia cadastrada.'}
+                  </TableCell>
+                </TableRow>
+              )}
+              {agendamentos.map((a) => (
                 <TableRow key={a.ID_AGENDAMENTO}>
                   <TableCell>{a.ID_AGENDAMENTO}</TableCell>
                   <TableCell>H{a.ID_HOSPITAL}/B{a.NUM_BLOCO}/S{a.NUM_SALA}</TableCell>
